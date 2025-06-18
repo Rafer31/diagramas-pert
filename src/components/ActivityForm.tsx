@@ -8,7 +8,12 @@ interface Props {
   activities?: Activity[];
 }
 
-export function ActivityForm({ onAdd, onUpdate, editingActivity, activities = [] }: Props) {
+export function ActivityForm({
+  onAdd,
+  onUpdate,
+  editingActivity,
+  activities = [],
+}: Props) {
   const [code, setCode] = useState("");
   const [description, setDescription] = useState("");
   const [duration, setDuration] = useState("");
@@ -17,6 +22,9 @@ export function ActivityForm({ onAdd, onUpdate, editingActivity, activities = []
   const [newRequirement, setNewRequirement] = useState("");
 
   const isEditing = editingActivity !== null && editingActivity !== undefined;
+  
+  // Nueva lógica: determinar si el botón debe estar habilitado
+  const isFormValid = code.trim() && description.trim() && duration.trim() && cost.trim();
 
   useEffect(() => {
     if (editingActivity) {
@@ -30,8 +38,13 @@ export function ActivityForm({ onAdd, onUpdate, editingActivity, activities = []
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!code.trim() || !description.trim() || !duration.trim() || !cost.trim()) {
+
+    if (
+      !code.trim() ||
+      !description.trim() ||
+      !duration.trim() ||
+      !cost.trim()
+    ) {
       alert("Por favor, completa todos los campos obligatorios.");
       return;
     }
@@ -49,18 +62,23 @@ export function ActivityForm({ onAdd, onUpdate, editingActivity, activities = []
     }
 
     // Verificar que el código no esté duplicado (solo para nuevas actividades)
-    if (!isEditing && activities.some(act => act.code === code.trim())) {
+    if (!isEditing && activities.some((act) => act.code === code.trim())) {
       alert("Ya existe una actividad con ese código.");
       return;
     }
 
     // Verificar que los requerimientos existan
-    const invalidRequirements = requirements.filter(req => 
-      !activities.some(act => act.code === req) && req !== code.trim()
+    const invalidRequirements = requirements.filter(
+      (req) =>
+        !activities.some((act) => act.code === req) && req !== code.trim()
     );
-    
+
     if (invalidRequirements.length > 0) {
-      alert(`Las siguientes actividades de requisito no existen: ${invalidRequirements.join(', ')}`);
+      alert(
+        `Las siguientes actividades de requisito no existen: ${invalidRequirements.join(
+          ", "
+        )}`
+      );
       return;
     }
 
@@ -69,7 +87,7 @@ export function ActivityForm({ onAdd, onUpdate, editingActivity, activities = []
       description: description.trim(),
       duration: durationNum,
       cost: costNum,
-      requirements: requirements.filter(req => req !== code.trim()) // Evitar auto-referencia
+      requirements: requirements.filter((req) => req !== code.trim()), // Evitar auto-referencia
     };
 
     if (isEditing && onUpdate) {
@@ -88,14 +106,17 @@ export function ActivityForm({ onAdd, onUpdate, editingActivity, activities = []
   };
 
   const handleAddRequirement = () => {
-    if (newRequirement.trim() && !requirements.includes(newRequirement.trim())) {
+    if (
+      newRequirement.trim() &&
+      !requirements.includes(newRequirement.trim())
+    ) {
       setRequirements([...requirements, newRequirement.trim()]);
       setNewRequirement("");
     }
   };
 
   const handleRemoveRequirement = (req: string) => {
-    setRequirements(requirements.filter(r => r !== req));
+    setRequirements(requirements.filter((r) => r !== req));
   };
 
   const handleCancel = () => {
@@ -107,14 +128,24 @@ export function ActivityForm({ onAdd, onUpdate, editingActivity, activities = []
     setNewRequirement("");
   };
 
-  const availableActivities = activities.filter(act => act.code !== code);
+  const availableActivities = activities.filter((act) => act.code !== code);
 
   return (
     <div>
       <h2 className="text-2xl font-bold text-red-600 mb-4">
         {isEditing ? "Editar Actividad" : "Agregar Nueva Actividad"}
       </h2>
-      
+
+      {/* Mensaje informativo cuando no hay actividades */}
+      {!isEditing && activities.length === 0 && (
+        <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+          <p className="text-blue-800 text-sm">
+            <strong>Nota:</strong> Esta será tu primera actividad. Puedes agregar más actividades después 
+            y establecer dependencias entre ellas para crear el diagrama PERT.
+          </p>
+        </div>
+      )}
+
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -176,58 +207,78 @@ export function ActivityForm({ onAdd, onUpdate, editingActivity, activities = []
           <label className="block text-sm font-medium text-gray-700 mb-1">
             Actividades Requeridas
           </label>
-          <div className="flex gap-2 mb-2">
-            <select
-              value={newRequirement}
-              onChange={(e) => setNewRequirement(e.target.value)}
-              className="flex-1 p-2 border border-gray-300 rounded-md"
-            >
-              <option value="">Seleccionar actividad...</option>
-              {availableActivities.map(act => (
-                <option key={act.code} value={act.code}>
-                  {act.code} - {act.description}
-                </option>
-              ))}
-            </select>
-            <button
-              type="button"
-              onClick={handleAddRequirement}
-              className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600"
-              disabled={!newRequirement}
-            >
-              Agregar
-            </button>
-          </div>
           
-          {requirements.length > 0 && (
-            <div className="flex flex-wrap gap-2">
-              {requirements.map(req => (
-                <span
-                  key={req}
-                  className="inline-flex items-center px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm"
-                >
-                  {req}
-                  <button
-                    type="button"
-                    onClick={() => handleRemoveRequirement(req)}
-                    className="ml-2 text-red-500 hover:text-red-700"
-                  >
-                    ×
-                  </button>
-                </span>
-              ))}
+          {activities.length === 0 && !isEditing ? (
+            <div className="p-3 bg-gray-50 border border-gray-200 rounded-md text-gray-600 text-sm">
+              No hay actividades disponibles para seleccionar como requisitos. 
+              Agrega esta actividad primero y luego podrás crear otras que dependan de ella.
             </div>
+          ) : (
+            <>
+              <div className="flex gap-2 mb-2">
+                <select
+                  value={newRequirement}
+                  onChange={(e) => setNewRequirement(e.target.value)}
+                  className="flex-1 p-2 border border-gray-300 rounded-md"
+                  disabled={availableActivities.length === 0}
+                >
+                  <option value="">
+                    {availableActivities.length === 0 
+                      ? "No hay actividades disponibles" 
+                      : "Seleccionar actividad..."}
+                  </option>
+                  {availableActivities.map((act) => (
+                    <option key={act.code} value={act.code}>
+                      {act.code} - {act.description}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  onClick={handleAddRequirement}
+                  className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed"
+                  disabled={!newRequirement || availableActivities.length === 0}
+                >
+                  Agregar
+                </button>
+              </div>
+
+              {requirements.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {requirements.map((req) => (
+                    <span
+                      key={req}
+                      className="inline-flex items-center px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm"
+                    >
+                      {req}
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveRequirement(req)}
+                        className="ml-2 text-red-500 hover:text-red-700"
+                      >
+                        ×
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
+            </>
           )}
         </div>
 
         <div className="flex gap-2">
           <button
             type="submit"
-            className="px-6 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
+            className={`px-6 py-2 rounded-md transition-colors ${
+              isFormValid
+                ? "bg-red-600 text-white hover:bg-red-700"
+                : "bg-gray-300 text-gray-500 cursor-not-allowed"
+            }`}
+            disabled={!isFormValid}
           >
             {isEditing ? "Actualizar" : "Agregar"} Actividad
           </button>
-          
+
           {isEditing && (
             <button
               type="button"
